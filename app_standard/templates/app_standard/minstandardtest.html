@@ -1,0 +1,365 @@
+{% extends 'app_general/components/base.html'%}
+
+{% block site_title %}
+Minimum Standard Test
+{% endblock %}
+
+{% block content %}
+<section class="content-section content-section-single">
+    <div class="content-container">
+        <h2 class="content-title text-center">Minimum Standard Testing requirement (Unit) of each country</h2>
+
+        <!-- Filter Icon -->
+        <button class="fa fa-filter filter-icon" aria-hidden="true" onclick="toggleFilterBox()">Filter</button>
+        
+        <!-- Filter Box -->
+        <div class="filter-box" id="filter-box">
+            <div class="filter-container">
+                <!-- Item Test Filter -->
+                <label for="item_test">Item Test - Specification</label>
+                <form method="get" action="{% url 'min_standard_test' %}" class="form-inline combined-form" id="item-spec-form">
+                    <select name="item_test" id="item_test" onchange="updateSpecifications()">
+                        <option value="">All Item Test</option>
+                        {% for item_test in all_item_tests %}
+                            <option value="{{ item_test.id }}" {% if item_test.id == selected_item_test_id %}selected{% endif %}>{{ item_test.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Specification Filter -->
+                    <!-- <label for="specification">Specification</label> -->
+                    <select name="specification" id="specification" onchange="updateItemTest()">
+                        <option value="">All Specification</option>
+                        {% for specification in specifications %}
+                            <option value="{{ specification.id }}" data-item-test="{{ specification.item_test_id }}" {% if specification.id == selected_specification_id %}selected{% endif %}>{{ specification.description }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <!-- Apply Button for Item Test & Specification -->
+                    <button type="submit" form="item-spec-form">Apply</button>
+                </form>
+
+                <!-- Country Filter -->
+                <label for="country">Country</label>
+                <form method="get" action="{% url 'min_standard_test' %}" class="form-inline combined-form" id="country-form">
+                    <select name="country" id="country">
+                        <option value="">All Countries</option>
+                        {% for country in countries %}
+                            <option value="{{ country.id }}" {% if country.id == selected_country.id %}selected{% endif %}>{{ country.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Apply Button for Country -->
+                    <button type="submit" form="country-form">Apply</button>
+                    
+                    <!-- Reset Button -->
+                    <button type="button" onclick="clearAllFilters()">Reset</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Abbreviation Definitions -->
+        <div class="abbreviations">
+            <h3>Abbreviation Definitions</h3>
+            <ul>
+                <li><strong>V :</strong> Voluntary mark <strong> S :</strong> Sampling test</li>
+                <li><strong>M :</strong> Mandatory mark <strong>R :</strong> Routine test</li>
+                <li><strong>1 :</strong> Should be tested (If possible)</li>
+                <li><strong>2 :</strong> Std.requirement (Must be tested)</li>
+                <li><strong>3 :</strong> Std.requirement must be tested at external lab (CCC)</li>
+                <li><strong>4 :</strong> Std.requirement which can select testing (Between Pressure and Refri. leakage test.) (QCO)</li>
+            </ul>
+        </div>
+
+        <!-- Table contents -->
+        <div class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center">No.</th>
+                            <th class="text-center">Item Test</th>
+                            <th class="text-center">Specification</th>
+                            <th class="text-center">Type</th>
+                            {% if not selected_country %}
+                                {% for country in countries %}
+                                    <th class="country-header"><div>{{ country.name }}</div></th>
+                                {% endfor %}
+                            {% else %}
+                                <th class="country-header"><div>{{ selected_country.name }}</div></th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item_test, specifications in item_tests %}
+                            {% for specification in specifications %}
+                                <tr class="{% cycle 'item-test-odd' 'item-test-even' %} item-test-row-{{ forloop.parentloop.counter0 }}">
+                                    {% if forloop.first %}
+                                        <td rowspan="{{ specifications.count }}" class="text-center">{{ item_test.no }}</td>
+                                        <td rowspan="{{ specifications.count }}" class="text-center">{{ item_test.name }}</td>
+                                    {% endif %}
+                                    <td>{{ specification.description|safe }}</td>
+                                    <td class="text-center">{{ specification.test_type }}</td>
+                                    {% if not selected_country %}
+                                        {% for country in countries %}
+                                            <td class="country-col-{{ forloop.counter }} text-center">
+                                                {% with found_requirement=False %}
+                                                    {% for requirement in specification.countrytestrequirement_set.all %}
+                                                        {% if requirement.country.id == country.id %}
+                                                            {% if requirement.requirement in "1234" %}
+                                                                {{ requirement.requirement }}
+                                                                {% with found_requirement=True %}
+                                                                {% endwith %}
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endwith %}
+                                            </td>
+                                        {% endfor %}
+                                    {% else %}
+                                        <td class="country-col-{{ selected_country.id }} text-center">
+                                            {% for requirement in specification.countrytestrequirement_set.all %}
+                                                {% if requirement.country.id == selected_country.id %}
+                                                    {{ requirement.requirement }}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    function toggleFilterBox() {
+        var filterBox = document.getElementById('filter-box');
+        filterBox.classList.toggle('active');
+        var filterIcon = document.querySelector('.filter-icon');
+        filterIcon.classList.toggle('active');
+    }
+
+    function updateSpecifications() {
+        var itemTestId = document.getElementById('item_test').value;
+        var specificationSelect = document.getElementById('specification');
+        var options = specificationSelect.querySelectorAll('option');
+
+        options.forEach(function(option) {
+            if (option.value === "") {
+                option.style.display = "block";
+            } else {
+                var itemTestIdOption = option.getAttribute('data-item-test');
+                if (itemTestIdOption === itemTestId || itemTestId === "") {
+                    option.style.display = "block";
+                } else {
+                    option.style.display = "none";
+                }
+            }
+        });
+    }
+
+    function updateItemTest() {
+        var specificationSelect = document.getElementById('specification');
+        var selectedSpec = specificationSelect.options[specificationSelect.selectedIndex];
+        var itemTestId = selectedSpec.getAttribute('data-item-test');
+        
+        var itemTestSelect = document.getElementById('item_test');
+        if (itemTestId) {
+            itemTestSelect.value = itemTestId;
+            updateSpecifications();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSpecifications();
+    });
+
+    function clearAllFilters() {
+        var forms = [document.getElementById('item-spec-form'), document.getElementById('country-form')];
+        
+        forms.forEach(function(form) {
+            var selects = form.querySelectorAll('select');
+            selects.forEach(function(select) {
+                select.value = "";
+            });
+        });
+
+        forms[0].submit();
+    }
+</script>
+
+<style>
+    .content-container {
+        overflow-x: auto;
+        position: relative;
+    }
+    .filter-icon {
+        cursor: pointer;
+        font-size: 24px;
+        display: inline-block;
+        margin: 10px;
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+    .filter-icon.active {
+        background-color: #f0f0f0;
+        border-color: #000;
+    }
+    .filter-box {
+        display: none;
+        position: absolute;
+        top: 40px;
+        right: 10px;
+        background-color: white;
+        border: 1px solid #ccc;
+        padding: 20px;
+        z-index: 1000;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+    }
+    .filter-box.active {
+        display: block;
+    }
+    .filter-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 12px;
+    }
+    .filter-container label {
+        margin-bottom: 0px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .form-inline {
+        /* display: flex; */
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+    .form-inline select {
+        flex: 1 0 60%;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .form-inline button {
+        flex: 1 0 20%;
+    }
+    .table-container {
+        position: relative;
+        max-height: 65vh; /* Adjust this as needed to fit your layout */
+        overflow: auto;
+        
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 0px;
+    }
+    thead {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 2;
+    }
+    th {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 2;
+        
+    }
+    th.country-header {
+        height: 140px;
+        width: 30px;
+        vertical-align: bottom;
+        
+    }
+    th.country-header div {
+        transform: rotate(-90deg);
+        white-space: nowrap;
+        
+    }
+    tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+    td, th {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+        
+    }
+    .country-header {
+        text-align: center;
+        width: 20px;
+    }
+    .country-header div {
+        transform: rotate(90deg);
+        white-space: nowrap;
+        width: 20px;
+    }
+    /* Adding colors to country columns */
+    {% for country in countries %}
+        .country-col-{{ forloop.counter }} {
+            background-color: {% cycle '#FCF9E2' '#e6f7ff' '#ffe6e6' '#e6ffe6' %};
+        }
+    {% endfor %}
+    
+    tr:hover td {
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3); /* Add subtle shadow for depth */
+    }
+    /* Add borders between item tests */
+    {% for item_test in item_tests %}
+        .item-test-row-{{ forloop.counter0 }} td {
+            border-top: 1px solid #000;
+        }
+    {% endfor %}
+    /* Abbreviation Styles */
+    .abbreviations {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    .abbreviations h3 {
+        margin-bottom: 10px;
+        font-size: 18px;
+    }
+    .abbreviations ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    .abbreviations ul li {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+</style>
+
+{% endblock %}
+
+<!-- ◯⚫⊕⦿-->
+
+<!-- A หน้าเพจสำหรับแสดงข้อมูล Minimum Standard Testing requirement (Unit) of each country 
+ โดยเมีลักษณะเป็นรูปแบบตาราง ประกอบไปด้วยคอลัมน์ต่างๆดังนี้ Item Test,Specification,Type และ 
+ คอลัมน์ของรายชื่อประเทศต่างๆ โดยหากประเทศใดกำหนดให้มีการทดสอบ Item Test,Specificationนั้นๆ ในตารางก็จะ
+ กำหนดให้มีการเช็คถูกลงใน คอลัมน์ของรายชื่อประเทศนั้นๆ(ลักษณะคล้ายๆเช็คลิสต์) ด้านบนของตารางมีปุ่มสำหรับฟิลเตอร์
+ และเนื่องจากในตารางมีตัวย่อจึงมี คำจำกัดความของคำย่อเพื่อบอกผู้ใช้ด้วย-->
+
+ <!--A page for displaying information on Minimum Standard Testing requirements (Unit) of each country. 
+ It is in a table format. Consists of the following columns: Item Test, Specification, Type and 
+ Column of names of countries. If any country requires testing of Item Test, that specification 
+ in the table willห et a check to be made in Column of the list of countries (similar to a checklist).  
+ At the top of the table there are buttons for filters.And because there are abbreviations in the table, 
+ there are Definitions of abbreviations to inform users as well.(UI on computer)-->
