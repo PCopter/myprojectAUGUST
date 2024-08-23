@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Regulation Status Update</title>
+    <style>
+        /* Inline styles for better compatibility */
+        .accordion-section {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .accordion-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .accordion-content {
+            font-size: 14px;
+            color: #333;
+        }
+    </style>
+</head>
+<body style="font-family: Arial, sans-serif;">
+    <h2>Regulation Status Update for {{ country.name }}</h2>
+
+    {% if regulations %}
+        {% for regulation in regulations %}
+            <div class="accordion-section">
+                <div class="accordion-title">{{ regulation.regulation }}</div>
+                <div class="accordion-content">
+                    <p><strong>Status:</strong> {{ regulation.status }}</p>
+                    <p><strong>Mandatory/Voluntary:</strong> {{ regulation.mandatory_voluntory }}</p>
+                    <p><strong>Standard:</strong> {{ regulation.standard }}</p>
+                    <p><strong>Effective Date:</strong> {{ regulation.effective_date }}</p>
+                    <p><strong>Expire Date:</strong> {{ regulation.expire_date }}</p>
+                    <p><strong>Days Until Expiry:</strong> {{ regulation.days_until_expiry }}</p>
+                    <p><strong>Action:</strong> {{ regulation.action }}</p>
+                    <p><strong>Scope:</strong> {{ regulation.scope }}</p>
+                    <p><strong>By:</strong> {{ regulation.by }}</p>
+                    <p><strong>Remark:</strong> {{ regulation.remark }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No regulations available at this time.</p>
+    {% endif %}
+</body>
+</html>

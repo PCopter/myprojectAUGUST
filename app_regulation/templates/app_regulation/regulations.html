@@ -1,0 +1,249 @@
+{% extends 'app_general/components/base.html'%}
+{% load static %}
+{% block site_title %}
+Regulations
+{% endblock %}
+{% block content %}
+
+<section>
+    <div class="dashboard-container">
+        
+        <!-- Side 20% -->
+        <div class="sidebar">
+            <!-- Search bar for country cards -->
+            <input style="margin: 10px 0px 15px 0px;" type="text" id="searchInput" onkeyup="searchCards()" placeholder="Search for countries..">
+
+            <div class="dropdown-filter">
+                <button class="button button-primary" style="margin-bottom: 4px;">
+                    <a style="text-decoration: none; color: #ffffff;" href="{% url 'regulations_manualmail' %}">Countries information & Sending mail
+                    <i class="fa fa-envelope" aria-hidden="true"></i>
+                    </a>
+                </button>
+            </div>
+
+            <!-- Country Cards -->
+            <div class="country-cards" id="cardContainer">
+                <div class="country-card" data-name="All" data-country-id="all" onclick="filterbyCountry('all', this)">
+                    <img src="{% static 'app_general/all.png' %}" alt="All" class="country-image">
+                    <div class="card-content">
+                        <p class="country-name">All</p>
+                        <p class="total-count">Regulations count : {{ regulations.count }}</p>
+                    </div>
+                </div>
+                {% for country in countries %}
+                <div class="country-card" data-name="{{ country.name }}" data-country-id="{{ country.id }}" onclick="filterbyCountry({{ country.id }}, this)">
+                    <img src="{% static country.image_relative_url %}" alt="{{ country.name }}" class="country-image">
+                    <div class="card-content">
+                        <p class="country-name">{{ country.name }}</p>
+                        <p class="total-count">Regulations count : {{ country.regulations.count }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Main content side 80% -->
+        <div class="main-content">
+            <div class="container">
+                <h2 style="margin-bottom: 16px; border-bottom: 1px solid #ddd; padding: 5px 0;" id="regulationsTitle">
+                    All Regulations
+                </h2>
+                
+                {% for regulation in regulations %}
+                <div class="collapsible-card regulation-card {{ regulation.status|lower }}-status" data-country-id="{{ regulation.country.id }}">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="accordion-symbol">+</span> 
+                        <img src="{% static regulation.country.image_relative_url %}" alt="{{ regulation.country.name }} flag" class="country-flag">
+                        <!-- {{ regulation.country.name }}  -->
+                        {{ regulation.regulation }}
+                    </div>
+            
+                    <div class="collapsible-content" style="display: none; max-height: 0; overflow: hidden; transition: max-height 0.3s ease;">
+                        <p class="section"><strong>Regulation:</strong> {{ regulation.regulation }}</p>
+                        <p class="section"><strong>Days until expiry:</strong> {{ regulation.days_until_expiry }} days</p>
+                        <p class="section"><strong>Mandatory/Voluntary:</strong> {{ regulation.mandatory_voluntory }}</p>
+                        <p class="section"><strong>Standard:</strong> {{ regulation.standard }}</p>
+                        <p class="section"><strong>Effective Date:</strong> {{ regulation.effectivedate }}</p>
+                        <div class="section"><strong>MCP Action:</strong> {{ regulation.action|safe }}</div>
+                        <div class="section"><strong>Scope:</strong> {{ regulation.scope|safe }}</div>
+                        <div class="section"><strong>Detail:</strong> {{ regulation.detail|safe }}</div>
+                        <p class="section"><strong>By:</strong> {{ regulation.by |safe }}</p>
+                        <p class="section"><strong>Remark:</strong> {{ regulation.remark }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+
+    .country-flag {
+        width: 20px; /* Adjust the size as needed */
+        height: auto;
+        margin-right: 10px; /* Space between the flag and text */
+        vertical-align: middle;
+    }
+    .active {
+        background-color: #cce5ff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .active-header {
+        background-color: #cce5ff ;
+    }
+
+    .section {
+        color: #555555;
+        padding: 5px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    /* Accordion style */
+    .collapsible-card {
+        background-color: #d6d6d6;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        padding: 5px;
+    }
+
+    .collapsible-header {
+        background-color: #fdfdf2;
+        color: rgb(0, 0, 0);
+        padding: 20px;
+        font-size: 18px;
+        font-weight: 400;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+    
+    .collapsible-content {
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        margin-top: 10px;
+        font-size: 16px;
+        
+    }
+    .collapsible-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .collapsible-header:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .accordion-symbol {
+        font-size: 1.5em;
+        transition: transform 0.3s ease;
+        margin-right: 20px;
+    }
+
+    .collapsible-card.is-expanded .accordion-symbol {
+        transform: rotate(-225deg);
+    }
+
+    .activating-status {
+        background-color: #ccffcc !important; /* Green */
+    }
+    .caution-status {
+        background-color: #f5f4b8 !important; /* Yellow */
+    }
+    .serious-status {
+        background-color: #ffe5cc !important; /* Orange */
+    }
+    .critical-status {
+        background-color: #f7b4bb !important; /* Red */
+    }
+    .expired-status {
+        background-color: #343a40 !important; /* Black */
+    }
+
+    
+    
+
+</style>
+
+<script>
+
+    
+    // Function to toggle collapsible content
+    function toggleCollapsible(element) {
+    var content = element.nextElementSibling;
+    var parentCard = element.parentNode;
+    var isCollapsed = content.style.display === "none" || content.style.maxHeight === "0px";
+    
+    if (isCollapsed) {
+        content.style.display = "block";
+        content.style.maxHeight = content.scrollHeight + "px";
+        parentCard.classList.add('is-expanded');
+    } else {
+        content.style.maxHeight = "0";
+        setTimeout(function() {
+            content.style.display = "none";
+        }, 150); // matches the transition time
+        parentCard.classList.remove('is-expanded');
+    }
+}
+
+
+    // Function to search country cards
+    function searchCards() {
+        var input, filter, cards, card, countryName;
+        input = document.getElementById("searchInput");
+        filter = input.value.toUpperCase();
+        cards = document.getElementsByClassName("country-card");
+
+        for (var i = 0; i < cards.length; i++) {
+            card = cards[i];
+            countryName = card.getAttribute("data-name");
+            if (countryName.toUpperCase().indexOf(filter) > -1) {
+                card.style.display = "";
+            } else {
+                card.style.display = "none";
+            }
+        }
+    }
+
+
+    // Function to filter regulations by country
+    function filterbyCountry(countryId , element) {
+    var cards , i;
+    cards = document.getElementsByClassName("regulation-card");
+
+    // Remove active class from all country cards
+    var countryCards = document.getElementsByClassName("country-card");
+    for ( i = 0 ; i < countryCards.length ; i++) {
+        countryCards[i].classList.remove("active");
+    }
+
+    // Add active class to the clicked country card
+    element.classList.add("active");
+
+    // Filter regulations by country
+    for ( i = 0 ; i < cards.length ; i++){
+        if(countryId === 'all' || cards[i].getAttribute("data-country-id") == countryId) {
+            cards[i].style.display = "";
+        }else {
+            cards[i].style.display = "none";
+        }
+    }
+
+    // Update the title based on the selected country
+    var titleElement = document.getElementById("regulationsTitle");
+    var countryName = element.getAttribute("data-name");
+    if(countryId === 'all'){
+        titleElement.textContent = "All Regulations";
+    } else {
+        titleElement.textContent = "Regulations of " + countryName;
+
+    }
+}
+
+        
+</script>
+
+{% endblock %}
